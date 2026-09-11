@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario de casa</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2F3E2E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --verde-oscuro: #2F3E2E;
+    --verde-musgo: #5C6E49;
+    --crema: #F6F2E9;
+    --naranja-tostado: #C7622B;
+    --gris-texto: #4A4A42;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--crema);
+    color: var(--gris-texto);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+
+  .tarjeta {
+    background: white;
+    border: 1px solid rgba(47, 62, 46, 0.15);
+    border-radius: 4px;
+    padding: 2rem;
+    max-width: 480px;
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    color: var(--verde-oscuro);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  p.subtitulo {
+    font-size: 0.95rem;
+    color: var(--gris-texto);
+    margin-bottom: 1.5rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* ---------- formulario auth ---------- */
+  .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  .campo label { font-size: 0.85rem; color: var(--gris-texto); }
+
+  .campo input {
+    padding: 0.6rem 0.7rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: system-ui, sans-serif;
+    width: 100%;
+  }
+
+  .input-con-icono {
+    position: relative;
+    display: flex;
+  }
+
+  .input-con-icono input {
+    flex: 1;
+    padding-right: 2.5rem;
+  }
+
+  .btn-ojo {
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem;
+    opacity: 0.6;
+    color: var(--gris-texto);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-ojo svg { width: 18px; height: 18px; display: block; }
+
+  .btn-ojo:hover { opacity: 1; }
+
+  /* ---------- diferenciación visual login vs. registro ---------- */
+  #pantalla-auth {
+    border-top: 4px solid var(--verde-oscuro);
+    transition: border-color 0.2s ease;
+  }
+
+  #pantalla-auth.modo-registro {
+    border-top: 4px solid var(--naranja-tostado);
+  }
+
+  #pantalla-auth.modo-registro #btn-enviar-auth {
+    background: var(--naranja-tostado);
+  }
+
+  .btn-principal {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--verde-oscuro);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    margin-top: 0.3rem;
+    transition: background 0.2s ease;
+  }
+
+  .btn-secundario {
+    width: 100%;
+    padding: 0.7rem;
+    background: transparent;
+    color: var(--verde-musgo);
+    border: 1px solid var(--verde-musgo);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    margin-top: 0.6rem;
+  }
+
+  .enlace-toggle {
+    text-align: center;
+    margin-top: 1rem;
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+  }
+
+  .enlace-toggle a { color: var(--verde-musgo); cursor: pointer; text-decoration: underline; }
+
+  .mensaje {
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .mensaje.error { background: #F7E9E1; color: var(--naranja-tostado); }
+  .mensaje.info { background: #F0EDE3; color: var(--gris-texto); }
+  .mensaje.ok { background: #E8EFE1; color: var(--verde-oscuro); }
+
+  /* ---------- cabecera de la app ---------- */
+  .cabecera-app {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .btn-salir {
+    background: none;
+    border: none;
+    color: var(--gris-texto);
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  /* ---------- inventario (reutilizado) ---------- */
+  .lista-productos { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .producto {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 0.75rem 0.9rem;
+    background: var(--crema);
+    border-radius: 4px;
+    border-left: 3px solid var(--verde-musgo);
+  }
+
+  .producto.bajo-stock { border-left-color: var(--naranja-tostado); }
+
+  .producto-info { display: flex; flex-direction: column; gap: 0.15rem; }
+  .producto-nombre { font-size: 1rem; color: var(--verde-oscuro); font-weight: 600; }
+  .producto-categoria { font-family: system-ui, sans-serif; font-size: 0.78rem; color: var(--gris-texto); opacity: 0.7; }
+
+  .controles-cantidad { display: flex; align-items: center; gap: 0.6rem; font-family: system-ui, sans-serif; }
+
+  .btn-cantidad {
+    width: 34px; height: 34px; border-radius: 4px;
+    border: 1px solid var(--verde-musgo); background: white; color: var(--verde-oscuro);
+    font-size: 1.2rem; line-height: 1; cursor: pointer;
+  }
+
+  .btn-cantidad:active { background: var(--verde-musgo); color: white; }
+
+  .btn-añadir-lista {
+    display: none;
+    padding: 0.4rem 0.7rem;
+    background: var(--naranja-tostado);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    margin-left: 0.5rem;
+  }
+
+  .producto.bajo-stock .btn-añadir-lista { display: inline-block; }
+
+  .btn-registrar-compra {
+    padding: 0.4rem 0.6rem;
+    background: transparent;
+    color: var(--verde-musgo);
+    border: 1px solid var(--verde-musgo);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    margin-left: 0.5rem;
+  }
+
+  .cantidad-valor { min-width: 2ch; text-align: center; font-size: 1rem; font-weight: 600; color: var(--gris-texto); }
+
+  .vacio, .cargando-lista {
+    font-family: system-ui, sans-serif; font-size: 0.9rem; color: var(--gris-texto); opacity: 0.7; padding: 1rem 0;
+  }
+
+  .oculto { display: none !important; }
+
+  /* ---------- solicitudes pendientes (vista propietario) ---------- */
+  .seccion-solicitudes {
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(47,62,46,0.15);
+  }
+
+  .seccion-solicitudes h2 {
+    font-size: 1.05rem;
+    color: var(--verde-oscuro);
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+  }
+
+  .lista-solicitudes { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .solicitud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+    background: var(--crema);
+    border-radius: 4px;
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+  }
+
+  .solicitud-id { color: var(--gris-texto); word-break: break-all; margin-right: 0.5rem; }
+
+  .botones-solicitud { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+  .btn-mini {
+    padding: 0.4rem 0.7rem;
+    border-radius: 4px;
+    border: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+  }
+
+  .btn-mini.aprobar { background: var(--verde-musgo); color: white; }
+  .btn-mini.rechazar { background: transparent; color: var(--naranja-tostado); border: 1px solid var(--naranja-tostado); }
+
+  .sin-solicitudes {
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: var(--gris-texto);
+    opacity: 0.7;
+  }
+
+  .bloque-codigo-invitacion {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(47,62,46,0.15);
+  }
+
+  .fila-codigo-invitacion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .fila-codigo-invitacion code {
+    flex: 1;
+    padding: 0.5rem 0.7rem;
+    background: var(--crema);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    word-break: break-all;
+  }
+
+  /* ---------- formulario nuevo producto ---------- */
+  .form-nuevo-producto {
+    margin: 1rem 0 1.5rem;
+    padding: 1rem;
+    background: var(--crema);
+    border-radius: 4px;
+    font-family: system-ui, sans-serif;
+  }
+
+  .form-nuevo-producto .campo select,
+  .form-nuevo-producto .campo input {
+    padding: 0.5rem 0.6rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  .form-nuevo-producto .campo input.oculto,
+  .form-nuevo-producto .campo select.oculto {
+    display: none;
+  }
+
+  #mensaje-nuevo-producto .mensaje { margin-top: 0.75rem; margin-bottom: 0; }
+
+  .acciones-inventario {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .acciones-inventario .btn-secundario { margin-top: 0; }
+
+  .fila-archivado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+    background: white;
+    border-radius: 4px;
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+
+  .btn-reactivar {
+    padding: 0.4rem 0.7rem;
+    background: var(--verde-musgo);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+  }
+
+  .btn-archivar {
+    padding: 0.4rem 0.6rem;
+    background: transparent;
+    color: var(--gris-texto);
+    opacity: 0.6;
+    border: 1px solid rgba(74,74,66,0.4);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+    margin-left: 0.5rem;
+  }
+
+  /* ---------- gestión de categorías ---------- */
+  .fila-categoria {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 0.75rem 0.9rem;
+    background: white;
+    border-radius: 4px;
+  }
+
+  .categoria-info { display: flex; flex-direction: column; gap: 0.15rem; }
+  .categoria-nombre { font-size: 1rem; color: var(--verde-oscuro); font-weight: 600; }
+  .categoria-conteo { font-family: system-ui, sans-serif; font-size: 0.78rem; color: var(--gris-texto); opacity: 0.7; }
+  .acciones-categoria { display: flex; gap: 0.4rem; }
+
+  /* ---------- historial de compras (solo lectura) ---------- */
+  .fila-historial {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.65rem 0.8rem;
+    background: white;
+    border-radius: 4px;
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+  }
+
+  .historial-info { display: flex; flex-direction: column; gap: 0.1rem; }
+  .historial-producto { color: var(--verde-oscuro); font-weight: 600; }
+  .historial-detalle { font-size: 0.78rem; color: var(--gris-texto); opacity: 0.75; }
+  .historial-fecha { font-size: 0.78rem; color: var(--gris-texto); opacity: 0.6; white-space: nowrap; }
+
+  /* ---------- paginación ---------- */
+  .paginacion {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem;
+    margin-top: 0.85rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  .btn-pagina {
+    min-width: 30px;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid rgba(47,62,46,0.3);
+    background: white;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--gris-texto);
+    cursor: pointer;
+  }
+
+  .btn-pagina.activa {
+    background: var(--verde-oscuro);
+    color: white;
+    border-color: var(--verde-oscuro);
+  }
+
+  .btn-pagina:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  /* ---------- modo edición ---------- */
+  .controles-edicion { display: none; gap: 0.5rem; }
+
+  #vista-inventario.modo-edicion .controles-cantidad { display: none; }
+  #vista-inventario.modo-edicion .controles-edicion { display: flex; }
+
+  .btn-editar-producto, .btn-eliminar-producto {
+    width: 34px;
+    height: 34px;
+    border-radius: 4px;
+    border: 1px solid rgba(47,62,46,0.3);
+    background: white;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .btn-editar-producto { color: var(--verde-musgo); }
+  .btn-eliminar-producto { color: var(--naranja-tostado); }
+
+  .panel-edicion-producto {
+    width: 100%;
+    margin-top: 0.6rem;
+    padding: 0.9rem;
+    background: white;
+    border: 1px solid rgba(47,62,46,0.2);
+    border-radius: 4px;
+    font-family: system-ui, sans-serif;
+  }
+
+  .panel-edicion-producto .campo { margin-bottom: 0.6rem; }
+  .panel-edicion-producto .campo label { font-size: 0.78rem; }
+  .panel-edicion-producto .campo input,
+  .panel-edicion-producto .campo select {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+
+  .botones-panel-edicion { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+
+  .btn-guardar-edicion {
+    flex: 1;
+    padding: 0.55rem;
+    background: var(--verde-oscuro);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .btn-cancelar-edicion {
+    flex: 1;
+    padding: 0.55rem;
+    background: transparent;
+    color: var(--gris-texto);
+    border: 1px solid rgba(74,74,66,0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  /* ---------- pestañas inventario / lista ---------- */
+  .pestanas {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  .btn-pestana {
+    flex: 1;
+    padding: 0.6rem;
+    background: var(--crema);
+    border: 1px solid rgba(47,62,46,0.2);
+    border-radius: 4px;
+    color: var(--gris-texto);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .btn-pestana.activa {
+    background: var(--verde-oscuro);
+    color: white;
+    border-color: var(--verde-oscuro);
+  }
+
+  .filtro-categoria {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: system-ui, sans-serif;
+    color: var(--verde-oscuro);
+    background: white;
+  }
+
+  .buscador-inventario {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: system-ui, sans-serif;
+    color: var(--gris-texto);
+    background: white;
+  }
+
+  .buscador-lista-compra {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* El buscador de "añadir a la lista" pertenece visualmente al bloque de abajo (desplegable +
+     cantidad + botón), así que se separa de la lista de arriba y se pega a ese bloque. */
+  #buscador-producto-añadir {
+    margin-top: 1.25rem;
+    margin-bottom: 0.35rem;
+  }
+
+  /* ---------- selector de hogar ---------- */
+  .lista-hogares-selector {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .btn-hogar-opcion {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    background: var(--crema);
+    border: 1px solid rgba(47,62,46,0.2);
+    border-radius: 4px;
+    color: var(--verde-oscuro);
+    font-size: 0.95rem;
+    font-family: system-ui, sans-serif;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .btn-hogar-opcion:hover { background: #EFEADC; }
+
+  .btn-cambiar-hogar {
+    background: none;
+    border: none;
+    color: var(--gris-texto);
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-right: 0.75rem;
+  }
+
+  /* ---------- lista de la compra ---------- */
+  .lista-compra-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0.9rem;
+    background: var(--crema);
+    border-radius: 4px;
+    border-left: 3px solid var(--naranja-tostado);
+  }
+
+  .lista-compra-info { display: flex; flex-direction: column; gap: 0.15rem; }
+  .lista-compra-nombre { font-size: 1rem; color: var(--verde-oscuro); font-weight: 600; }
+  .lista-compra-cantidad { font-family: system-ui, sans-serif; font-size: 0.78rem; color: var(--gris-texto); opacity: 0.8; }
+
+  .btn-comprado {
+    padding: 0.45rem 0.8rem;
+    background: var(--verde-musgo);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: system-ui, sans-serif;
+    cursor: pointer;
+  }
+
+  .botones-lista-compra { display: flex; align-items: center; gap: 0.5rem; }
+
+  .btn-quitar-lista {
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    color: var(--naranja-tostado);
+    border: 1px solid var(--naranja-tostado);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .bloque-añadir {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  .bloque-añadir select, .bloque-añadir input {
+    padding: 0.5rem;
+    border: 1px solid rgba(47,62,46,0.25);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: system-ui, sans-serif;
+  }
+
+  .bloque-añadir select { flex: 2; }
+  .bloque-añadir input { flex: 1; width: 60px; }
+
+  .bloque-añadir button {
+    padding: 0.5rem 0.9rem;
+    background: var(--verde-oscuro);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  /* ---------- ajustes para pantallas de móvil ---------- */
+  @media (max-width: 480px) {
+    body { padding: 1rem 0.6rem; }
+
+    .tarjeta { padding: 1.25rem 1rem; }
+
+    .producto {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+
+    .producto-info { width: 100%; }
+    .producto-nombre { overflow-wrap: anywhere; }
+
+    .controles-cantidad {
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    .lista-compra-item {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+
+    .botones-lista-compra { width: 100%; justify-content: flex-end; }
+
+    .acciones-inventario { flex-wrap: wrap; }
+    .acciones-inventario .btn-secundario { flex: 1 1 45%; }
+
+    .bloque-añadir { flex-wrap: wrap; }
+    .bloque-añadir select { flex: 1 1 100%; }
+    .bloque-añadir input { flex: 1 1 auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PANTALLA: LOGIN / REGISTRO ================= -->
+<div id="pantalla-auth" class="tarjeta">
+  <h1 id="titulo-auth">Iniciar sesión</h1>
+  <p class="subtitulo">Accede a tu inventario de casa</p>
+
+  <div id="mensaje-auth"></div>
+
+  <div class="campo">
+    <label for="input-email">Email</label>
+    <input type="email" id="input-email" autocomplete="email">
+  </div>
+  <div class="campo">
+    <label for="input-password">Contraseña</label>
+    <div class="input-con-icono">
+      <input type="password" id="input-password" autocomplete="current-password">
+      <button type="button" class="btn-ojo" data-target="input-password" data-oculto="true"></button>
+    </div>
+  </div>
+  <div class="campo oculto" id="campo-confirmar-password">
+    <label for="input-password-confirmar">Confirmar contraseña</label>
+    <div class="input-con-icono">
+      <input type="password" id="input-password-confirmar" autocomplete="new-password">
+      <button type="button" class="btn-ojo" data-target="input-password-confirmar" data-oculto="true"></button>
+    </div>
+  </div>
+
+  <button class="btn-principal" id="btn-enviar-auth">Entrar</button>
+
+  <div class="enlace-toggle">
+    <span id="texto-toggle">¿No tienes cuenta?</span>
+    <a id="link-toggle">Regístrate</a>
+  </div>
+</div>
+
+<!-- ================= PANTALLA: ESPERANDO ACCESO / EMPEZAR ================= -->
+<div id="pantalla-pendiente" class="tarjeta oculto">
+  <h1>Empecemos</h1>
+  <p class="subtitulo">Únete a un hogar existente o crea uno nuevo</p>
+  <div id="mensaje-pendiente"></div>
+
+  <div class="pestanas" id="pestanas-pendiente">
+    <button class="btn-pestana activa" id="tab-unirse">Unirme a un hogar</button>
+    <button class="btn-pestana" id="tab-crear-hogar">Crear un hogar nuevo</button>
+  </div>
+
+  <div id="bloque-solicitar">
+    <div class="campo">
+      <label for="input-hogar-id">Código de invitación (te lo da quien te invita)</label>
+      <input type="text" id="input-hogar-id" placeholder="00000000-0000-0000-0000-000000000000">
+    </div>
+    <button class="btn-principal" id="btn-solicitar-acceso">Solicitar acceso</button>
+  </div>
+
+  <div id="bloque-crear-hogar" class="oculto">
+    <div class="campo">
+      <label for="input-nombre-hogar-nuevo">Nombre del hogar</label>
+      <input type="text" id="input-nombre-hogar-nuevo" placeholder="Ej. Casa de Diego">
+    </div>
+    <button class="btn-principal" id="btn-crear-hogar-nuevo">Crear hogar</button>
+  </div>
+
+  <button class="btn-secundario" id="btn-salir-pendiente">Cerrar sesión</button>
+</div>
+
+<!-- ================= PANTALLA: SELECTOR DE HOGAR ================= -->
+<div id="pantalla-selector-hogar" class="tarjeta oculto">
+  <h1>Elige un hogar</h1>
+  <p class="subtitulo">Tienes acceso a varios hogares</p>
+  <ul id="lista-hogares-selector" class="lista-hogares-selector"></ul>
+  <button class="btn-secundario" id="btn-salir-selector">Cerrar sesión</button>
+</div>
+
+<!-- ================= PANTALLA: APP PRINCIPAL ================= -->
+<div id="pantalla-app" class="tarjeta oculto">
+  <div class="cabecera-app">
+    <h1 id="titulo-vista">Inventario</h1>
+    <span>
+      <button class="btn-cambiar-hogar oculto" id="btn-cambiar-hogar">Cambiar de hogar</button>
+      <button class="btn-salir" id="btn-salir-app">Cerrar sesión</button>
+    </span>
+  </div>
+
+  <div class="pestanas">
+    <button class="btn-pestana activa" id="tab-inventario">Inventario</button>
+    <button class="btn-pestana" id="tab-lista">Lista de la compra</button>
+  </div>
+
+  <div id="vista-inventario">
+    <div class="acciones-inventario">
+      <button class="btn-secundario" id="btn-mostrar-form-producto">+ Nuevo producto</button>
+      <button class="btn-secundario" id="btn-mostrar-archivados">Ver archivados</button>
+      <button class="btn-secundario" id="btn-mostrar-categorias">🏷 Categorías</button>
+      <button class="btn-secundario" id="btn-modo-edicion">✎ Editar</button>
+    </div>
+
+    <select id="filtro-categoria" class="filtro-categoria">
+      <option value="">Todas las categorías</option>
+    </select>
+
+    <input type="text" id="buscador-inventario" class="buscador-inventario" placeholder="Buscar producto…">
+
+
+    <div id="form-nuevo-producto" class="form-nuevo-producto oculto">
+      <div class="campo">
+        <label for="np-nombre">Nombre</label>
+        <input type="text" id="np-nombre" placeholder="Ej. Leche">
+      </div>
+
+      <div class="campo">
+        <label for="np-categoria">Categoría</label>
+        <select id="np-categoria"></select>
+        <input type="text" id="np-categoria-nueva" class="oculto" placeholder="Nombre de la categoría nueva">
+      </div>
+
+      <div class="campo">
+        <label for="np-unidad">Unidad</label>
+        <select id="np-unidad"></select>
+        <input type="text" id="np-unidad-nueva" class="oculto" placeholder="Nombre de la unidad nueva">
+      </div>
+
+      <div class="campo">
+        <label for="np-cantidad-inicial">Cantidad que tienes ahora mismo</label>
+        <input type="number" id="np-cantidad-inicial" min="0" step="any" value="0">
+      </div>
+
+      <div class="campo">
+        <label for="np-stock-minimo">Avisar cuando quede igual o menos de</label>
+        <input type="number" id="np-stock-minimo" min="0" step="any" value="1">
+      </div>
+
+      <div class="campo">
+        <label for="np-paso-cantidad">Incremento de los botones +/- (ej. 1, 0.5, 0.25)</label>
+        <input type="number" id="np-paso-cantidad" min="0.01" step="any" value="1">
+      </div>
+
+      <button class="btn-principal" id="btn-crear-producto">Crear producto</button>
+      <div id="mensaje-nuevo-producto"></div>
+    </div>
+
+    <div id="seccion-archivados" class="form-nuevo-producto oculto">
+      <ul id="lista-archivados" class="lista-productos"></ul>
+      <div id="paginacion-archivados" class="paginacion"></div>
+    </div>
+
+    <div id="seccion-categorias" class="form-nuevo-producto oculto">
+      <ul id="lista-categorias-gestion" class="lista-productos"></ul>
+    </div>
+
+    <ul id="lista-productos" class="lista-productos">
+      <li class="cargando-lista">Cargando productos…</li>
+    </ul>
+    <div id="paginacion-productos" class="paginacion"></div>
+  </div>
+
+  <div id="vista-lista-compra" class="oculto">
+    <input type="text" id="buscador-lista-compra" class="buscador-lista-compra" placeholder="Buscar en la lista de la compra…">
+    <ul id="lista-compra-items" class="lista-productos"></ul>
+    <div id="paginacion-lista-compra" class="paginacion"></div>
+    <input type="text" id="buscador-producto-añadir" class="buscador-lista-compra" placeholder="Buscar producto para añadir…">
+    <div class="bloque-añadir">
+      <select id="select-producto-añadir"></select>
+      <input type="number" id="input-cantidad-añadir" placeholder="Cant." min="1" step="any" value="1">
+      <button id="btn-añadir-a-lista">Añadir</button>
+    </div>
+
+    <div class="enlace-toggle" style="margin-top: 1.25rem; text-align: left;">
+      <a id="link-ver-historial">Ver historial de compras</a>
+    </div>
+
+    <div id="seccion-historial" class="form-nuevo-producto oculto">
+      <ul id="lista-historial" class="lista-productos"></ul>
+      <div id="paginacion-historial" class="paginacion"></div>
+    </div>
+  </div>
+
+  <div id="seccion-solicitudes" class="seccion-solicitudes oculto">
+    <div id="bloque-codigo-invitacion" class="bloque-codigo-invitacion">
+      <p class="subtitulo" style="margin-bottom:0.4rem;">Código de invitación de este hogar:</p>
+      <div class="fila-codigo-invitacion">
+        <code id="texto-codigo-invitacion"></code>
+        <button class="btn-mini" id="btn-copiar-codigo">Copiar</button>
+      </div>
+    </div>
+
+    <h2>Solicitudes pendientes</h2>
+    <ul id="lista-solicitudes" class="lista-solicitudes"></ul>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ⚠️ Sustituye estos dos valores por los tuyos (Project Settings → API Keys)
+  const SUPABASE_URL = 'https://ofnrxeaimqxhmhdhdfge.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_NyO_Il9HgoP7i7j_EHOnsA_REHCU6DU';
+
+  const cliente = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ---------- referencias a pantallas ----------
+  const pantallaAuth = document.getElementById('pantalla-auth');
+  const pantallaPendiente = document.getElementById('pantalla-pendiente');
+  const pantallaApp = document.getElementById('pantalla-app');
+  const pantallaSelectorHogar = document.getElementById('pantalla-selector-hogar');
+
+  function mostrarPantalla(pantalla) {
+    [pantallaAuth, pantallaPendiente, pantallaApp, pantallaSelectorHogar].forEach(p => p.classList.add('oculto'));
+    pantalla.classList.remove('oculto');
+  }
+
+  // ---------- helper genérico de paginación (usado en inventario, lista de la compra, historial y archivados) ----------
+  const ITEMS_POR_PAGINA = 10;
+
+  // Recorta el array de items a la página indicada en "estado.pagina", corrigiendo
+  // el número de página si se ha quedado fuera de rango (p.ej. al filtrar o al borrar el último item de una página).
+  function recortarPagina(items, estado, itemsPorPagina = ITEMS_POR_PAGINA) {
+    const totalPaginas = Math.max(1, Math.ceil(items.length / itemsPorPagina));
+    if (estado.pagina > totalPaginas) estado.pagina = totalPaginas;
+    if (estado.pagina < 1) estado.pagina = 1;
+    const inicio = (estado.pagina - 1) * itemsPorPagina;
+    return items.slice(inicio, inicio + itemsPorPagina);
+  }
+
+  // Dibuja los botones de paginación (‹ 1 2 3 › ) dentro de contenedorEl.
+  // onCambiarPagina(nuevaPagina) se llama al pulsar un botón válido.
+  function renderizarPaginacion(contenedorEl, totalItems, paginaActual, onCambiarPagina, itemsPorPagina = ITEMS_POR_PAGINA) {
+    const totalPaginas = Math.max(1, Math.ceil(totalItems / itemsPorPagina));
+
+    if (totalPaginas <= 1) {
+      contenedorEl.innerHTML = '';
+      return;
+    }
+
+    let html = `<button class="btn-pagina" data-pagina="${paginaActual - 1}" ${paginaActual === 1 ? 'disabled' : ''}>‹</button>`;
+    for (let i = 1; i <= totalPaginas; i++) {
+      html += `<button class="btn-pagina${i === paginaActual ? ' activa' : ''}" data-pagina="${i}">${i}</button>`;
+    }
+    html += `<button class="btn-pagina" data-pagina="${paginaActual + 1}" ${paginaActual === totalPaginas ? 'disabled' : ''}>›</button>`;
+
+    contenedorEl.innerHTML = html;
+
+    contenedorEl.querySelectorAll('.btn-pagina').forEach(boton => {
+      boton.addEventListener('click', () => {
+        const nuevaPagina = parseInt(boton.dataset.pagina, 10);
+        if (nuevaPagina < 1 || nuevaPagina > totalPaginas || nuevaPagina === paginaActual) return;
+        onCambiarPagina(nuevaPagina);
+      });
+    });
+  }
+
+  // ---------- lógica de login/registro ----------
+  let modoRegistro = false;
+
+  const tituloAuth = document.getElementById('titulo-auth');
+  const mensajeAuth = document.getElementById('mensaje-auth');
+  const inputEmail = document.getElementById('input-email');
+  const inputPassword = document.getElementById('input-password');
+  const campoConfirmarPassword = document.getElementById('campo-confirmar-password');
+  const inputPasswordConfirmar = document.getElementById('input-password-confirmar');
+  const btnEnviarAuth = document.getElementById('btn-enviar-auth');
+  const linkToggle = document.getElementById('link-toggle');
+  const textoToggle = document.getElementById('texto-toggle');
+
+  // Botones de "ojo" para mostrar/ocultar contraseña (funciona para cualquier input con esta clase)
+  const SVG_OJO_ABIERTO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12C2 12 6 5 12 5C18 5 22 12 22 12C22 12 18 19 12 19C6 19 2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const SVG_OJO_CERRADO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12C2 12 6 5 12 5C18 5 22 12 22 12C22 12 18 19 12 19C6 19 2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>`;
+
+  document.querySelectorAll('.btn-ojo').forEach(boton => {
+    boton.innerHTML = SVG_OJO_CERRADO; // estado inicial: contraseña oculta
+    boton.addEventListener('click', () => {
+      const input = document.getElementById(boton.dataset.target);
+      const seVaAMostrar = input.type === 'password';
+      input.type = seVaAMostrar ? 'text' : 'password';
+      boton.innerHTML = seVaAMostrar ? SVG_OJO_ABIERTO : SVG_OJO_CERRADO;
+    });
+  });
+
+  linkToggle.addEventListener('click', () => {
+    modoRegistro = !modoRegistro;
+    tituloAuth.textContent = modoRegistro ? 'Crear cuenta' : 'Iniciar sesión';
+    btnEnviarAuth.textContent = modoRegistro ? 'Registrarme' : 'Entrar';
+    textoToggle.textContent = modoRegistro ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
+    linkToggle.textContent = modoRegistro ? 'Inicia sesión' : 'Regístrate';
+    campoConfirmarPassword.classList.toggle('oculto', !modoRegistro);
+    pantallaAuth.classList.toggle('modo-registro', modoRegistro);
+    mensajeAuth.innerHTML = '';
+  });
+
+  btnEnviarAuth.addEventListener('click', async () => {
+    const email = inputEmail.value.trim();
+    const password = inputPassword.value;
+
+    if (!email || !password) {
+      mensajeAuth.innerHTML = `<div class="mensaje error">Rellena email y contraseña.</div>`;
+      return;
+    }
+
+    if (modoRegistro) {
+      const passwordConfirmada = inputPasswordConfirmar.value;
+      if (password !== passwordConfirmada) {
+        mensajeAuth.innerHTML = `<div class="mensaje error">Las contraseñas no coinciden.</div>`;
+        return;
+      }
+
+      const { error } = await cliente.auth.signUp({ email, password });
+      if (error) {
+        mensajeAuth.innerHTML = `<div class="mensaje error">${error.message}</div>`;
+        return;
+      }
+      mensajeAuth.innerHTML = `<div class="mensaje ok">Cuenta creada. Si pedimos confirmación de email, revisa tu bandeja antes de entrar.</div>`;
+    } else {
+      const { error } = await cliente.auth.signInWithPassword({ email, password });
+      if (error) {
+        mensajeAuth.innerHTML = `<div class="mensaje error">${error.message}</div>`;
+        return;
+      }
+      // onAuthStateChange se encarga de continuar el flujo
+    }
+  });
+
+  // ---------- pantalla "pendiente / solicitar acceso / crear hogar" ----------
+  const mensajePendiente = document.getElementById('mensaje-pendiente');
+  const pestanasPendiente = document.getElementById('pestanas-pendiente');
+  const bloqueSolicitar = document.getElementById('bloque-solicitar');
+  const bloqueCrearHogar = document.getElementById('bloque-crear-hogar');
+  const inputHogarId = document.getElementById('input-hogar-id');
+  const btnSolicitarAcceso = document.getElementById('btn-solicitar-acceso');
+  const btnSalirPendiente = document.getElementById('btn-salir-pendiente');
+  const tabUnirse = document.getElementById('tab-unirse');
+  const tabCrearHogar = document.getElementById('tab-crear-hogar');
+
+  tabUnirse.addEventListener('click', () => {
+    tabUnirse.classList.add('activa');
+    tabCrearHogar.classList.remove('activa');
+    bloqueSolicitar.classList.remove('oculto');
+    bloqueCrearHogar.classList.add('oculto');
+    mensajePendiente.innerHTML = '';
+  });
+
+  tabCrearHogar.addEventListener('click', () => {
+    tabCrearHogar.classList.add('activa');
+    tabUnirse.classList.remove('activa');
+    bloqueCrearHogar.classList.remove('oculto');
+    bloqueSolicitar.classList.add('oculto');
+    mensajePendiente.innerHTML = '';
+  });
+
+  btnSolicitarAcceso.addEventListener('click', async () => {
+    const hogarId = inputHogarId.value.trim();
+    if (!hogarId) {
+      mensajePendiente.innerHTML = `<div class="mensaje error">Pon el código de invitación.</div>`;
+      return;
+    }
+
+    const { data: { user } } = await cliente.auth.getUser();
+
+    const { error } = await cliente
+      .from('miembros_hogar')
+      .insert({ hogar_id: hogarId, usuario_id: user.id, rol: 'miembro', estado: 'pendiente' });
+
+    if (error) {
+      mensajePendiente.innerHTML = `<div class="mensaje error">${error.message}</div>`;
+      return;
+    }
+
+    pestanasPendiente.classList.add('oculto');
+    bloqueSolicitar.classList.add('oculto');
+    mensajePendiente.innerHTML = `<div class="mensaje ok">Solicitud enviada. Espera a que el propietario del hogar te apruebe.</div>`;
+  });
+
+  document.getElementById('btn-crear-hogar-nuevo').addEventListener('click', async () => {
+    const nombre = document.getElementById('input-nombre-hogar-nuevo').value.trim();
+    if (!nombre) {
+      mensajePendiente.innerHTML = `<div class="mensaje error">Ponle un nombre al hogar.</div>`;
+      return;
+    }
+
+    const { error } = await cliente.rpc('crear_hogar', { p_nombre: nombre });
+    if (error) {
+      mensajePendiente.innerHTML = `<div class="mensaje error">${error.message}</div>`;
+      return;
+    }
+
+    // Ya tiene un hogar aprobado (el que acaba de crear) — se re-evalúa y entra directo
+    comprobarEstadoUsuario();
+  });
+
+  btnSalirPendiente.addEventListener('click', () => cliente.auth.signOut());
+  document.getElementById('btn-salir-app').addEventListener('click', () => cliente.auth.signOut());
+
+  document.getElementById('btn-copiar-codigo').addEventListener('click', () => {
+    const texto = document.getElementById('texto-codigo-invitacion').textContent;
+    navigator.clipboard.writeText(texto).then(() => {
+      const boton = document.getElementById('btn-copiar-codigo');
+      const original = boton.textContent;
+      boton.textContent = 'Copiado';
+      setTimeout(() => { boton.textContent = original; }, 1500);
+    });
+  });
+
+  // ---------- comprobación de sesión y membresía ----------
+  // ---------- multi-hogar: super admin y selector ----------
+  let ultimosHogaresDisponibles = [];
+  let rolActual = null;
+  const listaHogaresSelectorEl = document.getElementById('lista-hogares-selector');
+  const btnCambiarHogar = document.getElementById('btn-cambiar-hogar');
+
+  async function esSuperAdmin() {
+    const { data, error } = await cliente.rpc('soy_super_admin');
+    if (error) { console.error(error); return false; }
+    return !!data;
+  }
+
+  function mostrarSelectorHogar(hogares) {
+    mostrarPantalla(pantallaSelectorHogar);
+    listaHogaresSelectorEl.innerHTML = hogares
+      .map(h => `<li><button class="btn-hogar-opcion" data-id="${h.id}">${h.nombre}</button></li>`)
+      .join('');
+
+    listaHogaresSelectorEl.querySelectorAll('.btn-hogar-opcion').forEach(boton => {
+      boton.addEventListener('click', () => {
+        const hogar = hogares.find(h => h.id === boton.dataset.id);
+        entrarAlHogar(hogar);
+      });
+    });
+  }
+
+  function entrarAlHogar(hogar) {
+    mostrarPantalla(pantallaApp);
+    hogarActual = hogar.id;
+    rolActual = hogar.rol;
+    btnCambiarHogar.classList.toggle('oculto', ultimosHogaresDisponibles.length <= 1);
+    cargarInventario(hogar.id);
+
+    if (hogar.rol === 'propietario') {
+      document.getElementById('seccion-solicitudes').classList.remove('oculto');
+      document.getElementById('texto-codigo-invitacion').textContent = hogar.id;
+      cargarSolicitudesPendientes(hogar.id);
+    } else {
+      document.getElementById('seccion-solicitudes').classList.add('oculto');
+    }
+
+    suscribirseARealtime(hogar.id, hogar.rol);
+  }
+
+  btnCambiarHogar.addEventListener('click', () => {
+    if (ultimosHogaresDisponibles.length > 1) mostrarSelectorHogar(ultimosHogaresDisponibles);
+  });
+
+  document.getElementById('btn-salir-selector').addEventListener('click', () => cliente.auth.signOut());
+
+  async function comprobarEstadoUsuario() {
+    const { data: { session } } = await cliente.auth.getSession();
+
+    if (!session) {
+      mostrarPantalla(pantallaAuth);
+      return;
+    }
+
+    const esAdmin = await esSuperAdmin();
+
+    if (esAdmin) {
+      // Los super admin ven TODOS los hogares, no solo los suyos
+      const { data: todosHogares, error } = await cliente.from('hogares').select('id, nombre').order('nombre');
+      if (error) { console.error(error); mostrarPantalla(pantallaAuth); return; }
+
+      const { data: misMembresias } = await cliente
+        .from('miembros_hogar')
+        .select('hogar_id, rol, estado')
+        .eq('usuario_id', session.user.id);
+
+      ultimosHogaresDisponibles = (todosHogares || []).map(h => {
+        const membresia = (misMembresias || []).find(m => m.hogar_id === h.id && m.estado === 'aprobado');
+        return { id: h.id, nombre: h.nombre, rol: membresia ? membresia.rol : 'propietario' };
+      });
+    } else {
+      const { data: membresias, error } = await cliente
+        .from('miembros_hogar')
+        .select('hogar_id, rol, estado, hogares(nombre)')
+        .eq('usuario_id', session.user.id);
+
+      if (error) {
+        console.error(error);
+        mostrarPantalla(pantallaAuth);
+        return;
+      }
+
+      const aprobadas = (membresias || []).filter(m => m.estado === 'aprobado');
+      ultimosHogaresDisponibles = aprobadas.map(m => ({
+        id: m.hogar_id,
+        nombre: m.hogares ? m.hogares.nombre : 'Hogar',
+        rol: m.rol
+      }));
+
+      if (ultimosHogaresDisponibles.length === 0) {
+        const pendiente = (membresias || []).find(m => m.estado === 'pendiente');
+        mostrarPantalla(pantallaPendiente);
+        if (pendiente) {
+          pestanasPendiente.classList.add('oculto');
+          bloqueSolicitar.classList.add('oculto');
+          bloqueCrearHogar.classList.add('oculto');
+          mensajePendiente.innerHTML = `<div class="mensaje info">Tu solicitud está pendiente de aprobación.</div>`;
+        } else {
+          pestanasPendiente.classList.remove('oculto');
+          tabUnirse.classList.add('activa');
+          tabCrearHogar.classList.remove('activa');
+          bloqueSolicitar.classList.remove('oculto');
+          bloqueCrearHogar.classList.add('oculto');
+          mensajePendiente.innerHTML = '';
+        }
+        return;
+      }
+    }
+
+    if (ultimosHogaresDisponibles.length === 1) {
+      entrarAlHogar(ultimosHogaresDisponibles[0]);
+    } else {
+      mostrarSelectorHogar(ultimosHogaresDisponibles);
+    }
+  }
+
+  cliente.auth.onAuthStateChange((_evento, _sesion) => {
+    comprobarEstadoUsuario();
+  });
+
+  // ---------- inventario (misma lógica que la versión anterior, ahora filtrada por hogar) ----------
+  let hogarActual = null;
+  let productosActuales = [];
+  const listaEl = document.getElementById('lista-productos');
+  const filtroCategoriaEl = document.getElementById('filtro-categoria');
+  const buscadorInventarioEl = document.getElementById('buscador-inventario');
+  const paginacionProductosEl = document.getElementById('paginacion-productos');
+  const estadoPaginaInventario = { pagina: 1 };
+
+  filtroCategoriaEl.addEventListener('change', () => { estadoPaginaInventario.pagina = 1; renderizarListaFiltrada(); });
+  buscadorInventarioEl.addEventListener('input', () => { estadoPaginaInventario.pagina = 1; renderizarListaFiltrada(); });
+
+  async function cargarInventario(hogarId) {
+    const { data, error } = await cliente
+      .from('productos')
+      .select('id, nombre, categoria, unidad, stock_minimo, paso_cantidad, hogar_id, inventario(id, cantidad)')
+      .eq('hogar_id', hogarId)
+      .eq('activo', true)
+      .order('nombre');
+
+    if (error) {
+      listaEl.innerHTML = `<li class="vacio">Error cargando el inventario: ${error.message}</li>`;
+      console.error(error);
+      return;
+    }
+
+    productosActuales = data || [];
+    actualizarOpcionesFiltroCategoria();
+    renderizarListaFiltrada();
+  }
+
+  // Rellena el desplegable de categorías con las que realmente tienen productos ahora mismo,
+  // conservando la categoría seleccionada si sigue existiendo.
+  function actualizarOpcionesFiltroCategoria() {
+    const seleccionActual = filtroCategoriaEl.value;
+    const categorias = [...new Set(productosActuales.map(p => p.categoria).filter(Boolean))].sort();
+
+    filtroCategoriaEl.innerHTML = '<option value="">Todas las categorías</option>' +
+      categorias.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    if (categorias.includes(seleccionActual)) {
+      filtroCategoriaEl.value = seleccionActual;
+    }
+  }
+
+  // Combina el filtro de categoría (desplegable) con el buscador de texto (nombre del producto),
+  // y pagina el resultado. Si "Todas las categorías" está seleccionado, cada resultado ya muestra
+  // su categoría como etiqueta debajo del nombre (ver renderizarProducto), así que no hace falta nada extra aquí.
+  function renderizarListaFiltrada() {
+    const categoriaElegida = filtroCategoriaEl.value;
+    const textoBusqueda = buscadorInventarioEl.value.trim().toLowerCase();
+
+    let productosAMostrar = categoriaElegida
+      ? productosActuales.filter(p => p.categoria === categoriaElegida)
+      : productosActuales;
+
+    if (textoBusqueda) {
+      productosAMostrar = productosAMostrar.filter(p => p.nombre.toLowerCase().includes(textoBusqueda));
+    }
+
+    if (productosAMostrar.length === 0) {
+      const mensaje = textoBusqueda
+        ? 'Ningún producto coincide con la búsqueda.'
+        : (categoriaElegida ? 'No hay productos en esta categoría.' : 'Todavía no hay productos en este hogar.');
+      listaEl.innerHTML = `<li class="vacio">${mensaje}</li>`;
+      paginacionProductosEl.innerHTML = '';
+      return;
+    }
+
+    const productosDeEstaPagina = recortarPagina(productosAMostrar, estadoPaginaInventario);
+
+    listaEl.innerHTML = '';
+    productosDeEstaPagina.forEach(producto => renderizarProducto(producto));
+
+    renderizarPaginacion(paginacionProductosEl, productosAMostrar.length, estadoPaginaInventario.pagina, (nuevaPagina) => {
+      estadoPaginaInventario.pagina = nuevaPagina;
+      renderizarListaFiltrada();
+    });
+  }
+
+
+  function renderizarProducto(producto) {
+    // Como inventario.producto_id es único, Supabase devuelve la relación como un
+    // objeto suelto (no como array) — hay que soportar ambos casos.
+    const filaInventario = Array.isArray(producto.inventario)
+      ? producto.inventario[0]
+      : producto.inventario || null;
+
+    const estado = {
+      cantidad: filaInventario ? filaInventario.cantidad : 0,
+      filaId: filaInventario ? filaInventario.id : null
+    };
+
+    const bajoStock = estado.cantidad <= producto.stock_minimo;
+
+    const li = document.createElement('li');
+    li.className = 'producto' + (bajoStock ? ' bajo-stock' : '');
+    li.innerHTML = `
+      <div class="producto-info">
+        <span class="producto-nombre">${producto.nombre}</span>
+        <span class="producto-categoria">${producto.categoria || 'sin categoría'}</span>
+      </div>
+      <div class="controles-cantidad">
+        <button class="btn-cantidad" data-accion="restar">−</button>
+        <span class="cantidad-valor">${estado.cantidad}</span>
+        <button class="btn-cantidad" data-accion="sumar">+</button>
+        <button class="btn-registrar-compra" title="Suma cantidad Y la anota en el historial de compras">Registrar compra</button>
+        <button class="btn-añadir-lista">A la lista</button>
+        <button class="btn-archivar" title="Deja de mostrarlo, sin borrar su historial de compras">Archivar</button>
+      </div>
+      <div class="controles-edicion">
+        <button class="btn-editar-producto" title="Editar">✎</button>
+        <button class="btn-eliminar-producto" title="Eliminar definitivamente">🗑</button>
+      </div>
+      <div class="panel-edicion-producto oculto">
+        <div class="campo">
+          <label>Nombre</label>
+          <input type="text" class="ed-nombre" value="${producto.nombre}">
+        </div>
+        <div class="campo">
+          <label>Categoría</label>
+          <select class="ed-categoria"></select>
+        </div>
+        <div class="campo">
+          <label>Unidad</label>
+          <select class="ed-unidad"></select>
+        </div>
+        <div class="campo">
+          <label>Avisar cuando quede igual o menos de</label>
+          <input type="number" class="ed-stock-minimo" min="0" step="any" value="${producto.stock_minimo}">
+        </div>
+        <div class="campo">
+          <label>Incremento de los botones +/- (ej. 1, 0.5, 0.25)</label>
+          <input type="number" class="ed-paso-cantidad" min="0.01" step="any" value="${producto.paso_cantidad || 1}">
+        </div>
+        <div class="botones-panel-edicion">
+          <button class="btn-guardar-edicion">Guardar</button>
+          <button class="btn-cancelar-edicion">Cancelar</button>
+        </div>
+        <div class="mensaje-edicion"></div>
+      </div>
+    `;
+
+    const [btnRestar, btnSumar] = li.querySelectorAll('.btn-cantidad');
+    const valorEl = li.querySelector('.cantidad-valor');
+    const btnAñadirLista = li.querySelector('.btn-añadir-lista');
+    const btnRegistrarCompra = li.querySelector('.btn-registrar-compra');
+    const btnArchivar = li.querySelector('.btn-archivar');
+    const btnEditarProducto = li.querySelector('.btn-editar-producto');
+    const btnEliminarProducto = li.querySelector('.btn-eliminar-producto');
+    const panelEdicion = li.querySelector('.panel-edicion-producto');
+
+    const paso = producto.paso_cantidad || 1;
+    btnRestar.addEventListener('click', () => ajustarCantidad(producto, estado, -paso, valorEl, li));
+    btnSumar.addEventListener('click', () => ajustarCantidad(producto, estado, paso, valorEl, li));
+    btnAñadirLista.addEventListener('click', () => añadirProductoALista(producto, estado));
+    btnRegistrarCompra.addEventListener('click', () => registrarCompraEspontanea(producto, estado, valorEl, li));
+    btnArchivar.addEventListener('click', () => archivarProducto(producto, li));
+    btnEditarProducto.addEventListener('click', () => abrirPanelEdicion(producto, li, panelEdicion));
+    btnEliminarProducto.addEventListener('click', () => eliminarProducto(producto, li));
+
+    listaEl.appendChild(li);
+  }
+
+  async function archivarProducto(producto, liEl) {
+    if (!confirm(`¿Archivar "${producto.nombre}"? Dejará de aparecer, pero su historial de compras se conserva. Podrás reactivarlo desde el propio inventario ("Ver archivados").`)) return;
+
+    const { error } = await cliente
+      .from('productos')
+      .update({ activo: false })
+      .eq('id', producto.id);
+
+    if (error) { alert('Error al archivar: ' + error.message); return; }
+
+    liEl.remove();
+  }
+
+  async function abrirPanelEdicion(producto, liEl, panelEdicion) {
+    panelEdicion.classList.remove('oculto');
+
+    const selectCategoriaEd = panelEdicion.querySelector('.ed-categoria');
+    const selectUnidadEd = panelEdicion.querySelector('.ed-unidad');
+
+    await cargarOpcionesEdicion('categorias', selectCategoriaEd, producto.categoria);
+    await cargarOpcionesEdicion('unidades', selectUnidadEd, producto.unidad);
+
+    panelEdicion.querySelector('.btn-cancelar-edicion').onclick = () => {
+      panelEdicion.classList.add('oculto');
+    };
+
+    panelEdicion.querySelector('.btn-guardar-edicion').onclick = async () => {
+      const nombreNuevo = panelEdicion.querySelector('.ed-nombre').value.trim();
+      const categoriaNueva = selectCategoriaEd.value;
+      const unidadNueva = selectUnidadEd.value;
+      const stockMinimoNuevo = parseFloat(panelEdicion.querySelector('.ed-stock-minimo').value) || 0;
+      const pasoCantidadNuevo = parseFloat(panelEdicion.querySelector('.ed-paso-cantidad').value) || 1;
+      const mensajeEd = panelEdicion.querySelector('.mensaje-edicion');
+
+      if (!nombreNuevo) {
+        mensajeEd.innerHTML = `<div class="mensaje error">El nombre no puede quedar vacío.</div>`;
+        return;
+      }
+
+      const { error } = await cliente
+        .from('productos')
+        .update({
+          nombre: nombreNuevo,
+          categoria: categoriaNueva || null,
+          unidad: unidadNueva || 'unidades',
+          stock_minimo: stockMinimoNuevo,
+          paso_cantidad: pasoCantidadNuevo
+        })
+        .eq('id', producto.id);
+
+      if (error) {
+        mensajeEd.innerHTML = `<div class="mensaje error">${error.message}</div>`;
+        return;
+      }
+
+      panelEdicion.classList.add('oculto');
+      cargarInventario(hogarActual);
+    };
+  }
+
+  // Igual que cargarOpcionesDesplegable, pero deja preseleccionado el valor actual del producto
+  async function cargarOpcionesEdicion(tabla, selectEl, valorActual) {
+    const { data, error } = await cliente
+      .from(tabla)
+      .select('nombre')
+      .eq('hogar_id', hogarActual)
+      .order('nombre');
+
+    if (error) { console.error(error); return; }
+
+    const nombres = (data || []).map(fila => fila.nombre);
+    if (valorActual && !nombres.includes(valorActual)) nombres.push(valorActual);
+
+    selectEl.innerHTML = nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (valorActual) selectEl.value = valorActual;
+  }
+
+  async function eliminarProducto(producto, liEl) {
+    // Comprobamos nosotros mismos si tiene historial, en vez de fiarnos de que la
+    // base de datos lo bloquee — así evitamos borrar historial por accidente si la
+    // restricción real de la tabla no fuera la que esperamos.
+    const { count, error: errorConteo } = await cliente
+      .from('historial_compras')
+      .select('id', { count: 'exact', head: true })
+      .eq('producto_id', producto.id);
+
+    if (errorConteo) { alert('Error comprobando historial: ' + errorConteo.message); return; }
+
+    if (count && count > 0) {
+      alert(`No se puede eliminar "${producto.nombre}" porque tiene ${count} compra(s) registradas en su historial. Usa "Archivar" en su lugar.`);
+      return;
+    }
+
+    if (!confirm(`¿Eliminar "${producto.nombre}" definitivamente? No tiene historial de compras, así que se borrará sin dejar rastro.`)) return;
+
+    const { error } = await cliente.from('productos').delete().eq('id', producto.id);
+
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+      return;
+    }
+
+    liEl.remove();
+  }
+
+  // Para compras que nunca pasaron por la lista de la compra (ofertas, compras impulsivas, etc.):
+  // suma al inventario Y deja constancia en historial_compras, igual que "marcar comprado" en la lista.
+  async function registrarCompraEspontanea(producto, estado, valorEl, liEl) {
+    const respuesta = window.prompt(`¿Cuánto compraste de "${producto.nombre}"?`, '1');
+    if (respuesta === null) return;
+
+    const cantidadComprada = parseFloat(respuesta);
+    if (isNaN(cantidadComprada) || cantidadComprada <= 0) return;
+
+    // Una sola llamada atómica: suma inventario + registra historial (y marca la lista si aplica)
+    const { error } = await cliente.rpc('confirmar_compra', {
+      p_hogar_id: producto.hogar_id,
+      p_producto_id: producto.id,
+      p_cantidad: cantidadComprada,
+      p_lista_compra_id: null
+    });
+
+    if (error) { alert('Error al registrar la compra: ' + error.message); return; }
+
+    const nuevaCantidad = estado.cantidad + cantidadComprada;
+    estado.cantidad = nuevaCantidad;
+    valorEl.textContent = nuevaCantidad;
+    liEl.classList.toggle('bajo-stock', nuevaCantidad <= producto.stock_minimo);
+  }
+
+  async function añadirProductoALista(producto, estado) {
+    // Sugerencia: lo mínimo necesario para llegar justo al umbral de aviso (stock_minimo)
+    const sugerencia = Math.max(1, producto.stock_minimo - estado.cantidad);
+
+    const { data: existente, error: errorLectura } = await cliente
+      .from('lista_compra')
+      .select('id')
+      .eq('producto_id', producto.id)
+      .eq('estado', 'pendiente')
+      .maybeSingle();
+
+    if (errorLectura) { alert('Error: ' + errorLectura.message); return; }
+
+    if (existente) {
+      const { error } = await cliente
+        .from('lista_compra')
+        .update({ cantidad: sugerencia, actualizado_en: new Date().toISOString() })
+        .eq('id', existente.id);
+      if (error) { alert('Error al actualizar la lista: ' + error.message); return; }
+    } else {
+      const { error } = await cliente
+        .from('lista_compra')
+        .insert({ hogar_id: producto.hogar_id, producto_id: producto.id, cantidad: sugerencia });
+      if (error) { alert('Error al añadir a la lista: ' + error.message); return; }
+    }
+
+    alert(`"${producto.nombre}" añadido a la lista de la compra (${sugerencia} ${producto.unidad}).`);
+  }
+
+  async function ajustarCantidad(producto, estado, delta, valorEl, liEl) {
+    // Redondeamos a 2 decimales para evitar errores típicos de coma flotante (0.1+0.2 ≠ 0.3 exacto)
+    const nuevaCantidad = Math.round(Math.max(0, estado.cantidad + delta) * 100) / 100;
+
+    if (estado.filaId) {
+      const { error } = await cliente
+        .from('inventario')
+        .update({ cantidad: nuevaCantidad, actualizado_en: new Date().toISOString() })
+        .eq('id', estado.filaId);
+
+      if (error) { alert('Error al actualizar cantidad: ' + error.message); console.error(error); return; }
+    } else {
+      const { data, error } = await cliente
+        .from('inventario')
+        .insert({ producto_id: producto.id, cantidad: nuevaCantidad })
+        .select('id')
+        .single();
+
+      if (error) { alert('Error al crear inventario: ' + error.message); console.error(error); return; }
+      estado.filaId = data.id;
+    }
+
+    estado.cantidad = nuevaCantidad;
+    valorEl.textContent = nuevaCantidad;
+    liEl.classList.toggle('bajo-stock', nuevaCantidad <= producto.stock_minimo);
+  }
+
+  // ---------- solicitudes pendientes (solo propietario) ----------
+  const listaSolicitudesEl = document.getElementById('lista-solicitudes');
+
+  async function cargarSolicitudesPendientes(hogarId) {
+    const { data, error } = await cliente.rpc('obtener_solicitudes_pendientes', { p_hogar_id: hogarId });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      listaSolicitudesEl.innerHTML = `<li class="sin-solicitudes">No hay solicitudes pendientes.</li>`;
+      return;
+    }
+
+    listaSolicitudesEl.innerHTML = '';
+    data.forEach(solicitud => renderizarSolicitud(solicitud));
+  }
+
+  function renderizarSolicitud(solicitud) {
+    const li = document.createElement('li');
+    li.className = 'solicitud';
+    li.innerHTML = `
+      <span class="solicitud-id">${solicitud.email}</span>
+      <span class="botones-solicitud">
+        <button class="btn-mini aprobar">Aprobar</button>
+        <button class="btn-mini rechazar">Rechazar</button>
+      </span>
+    `;
+
+    li.querySelector('.aprobar').addEventListener('click', () => resolverSolicitud(solicitud.id, 'aprobado', li));
+    li.querySelector('.rechazar').addEventListener('click', () => resolverSolicitud(solicitud.id, 'rechazado', li));
+
+    listaSolicitudesEl.appendChild(li);
+  }
+
+  async function resolverSolicitud(idFila, nuevoEstado, liEl) {
+    const { error } = await cliente
+      .from('miembros_hogar')
+      .update({ estado: nuevoEstado })
+      .eq('id', idFila);
+
+    if (error) { console.error(error); return; }
+
+    liEl.remove();
+    if (listaSolicitudesEl.children.length === 0) {
+      listaSolicitudesEl.innerHTML = `<li class="sin-solicitudes">No hay solicitudes pendientes.</li>`;
+    }
+  }
+
+  // ---------- pestañas ----------
+  const tabInventario = document.getElementById('tab-inventario');
+  const tabLista = document.getElementById('tab-lista');
+  const vistaInventario = document.getElementById('vista-inventario');
+  const vistaListaCompra = document.getElementById('vista-lista-compra');
+  const filtroCategoriaWrapper = document.getElementById('filtro-categoria');
+  const tituloVista = document.getElementById('titulo-vista');
+
+  // Cierra los paneles de gestión (nuevo producto / archivados / modo edición) — se usa al cambiar
+  // de pestaña o de acción, para que nunca se quede algo a medias abierto de fondo.
+  function cerrarPanelesGestionInventario() {
+    formNuevoProducto.classList.add('oculto');
+    btnMostrarFormProducto.textContent = '+ Nuevo producto';
+    seccionArchivados.classList.add('oculto');
+    btnMostrarArchivados.textContent = 'Ver archivados';
+    seccionCategorias.classList.add('oculto');
+    btnMostrarCategorias.textContent = '🏷 Categorías';
+    vistaInventario.classList.remove('modo-edicion');
+    if (btnModoEdicion) btnModoEdicion.textContent = '✎ Editar';
+    // Cierra también cualquier panel de edición individual que hubiera quedado abierto
+    document.querySelectorAll('.panel-edicion-producto').forEach(p => p.classList.add('oculto'));
+  }
+
+  tabInventario.addEventListener('click', () => {
+    tabInventario.classList.add('activa');
+    tabLista.classList.remove('activa');
+    vistaInventario.classList.remove('oculto');
+    filtroCategoriaWrapper.classList.remove('oculto');
+    vistaListaCompra.classList.add('oculto');
+    tituloVista.textContent = 'Inventario';
+    // Si venían de "Lista de la compra" con el historial abierto, lo cerramos para que no quede de fondo
+    seccionHistorial.classList.add('oculto');
+    linkVerHistorial.textContent = 'Ver historial de compras';
+    cargarInventario(hogarActual); // refresca por si cambió algo desde la pestaña de la lista
+  });
+
+  tabLista.addEventListener('click', () => {
+    tabLista.classList.add('activa');
+    tabInventario.classList.remove('activa');
+    cerrarPanelesGestionInventario();
+    vistaInventario.classList.add('oculto');
+    filtroCategoriaWrapper.classList.add('oculto');
+    vistaListaCompra.classList.remove('oculto');
+    tituloVista.textContent = 'Lista de la compra';
+    buscadorListaCompraEl.value = '';
+    estadoPaginaListaCompra.pagina = 1;
+    seccionHistorial.classList.add('oculto');
+    linkVerHistorial.textContent = 'Ver historial de compras';
+    cargarListaCompra(hogarActual);
+    cargarSelectorProductos(hogarActual);
+  });
+
+  // ---------- lista de la compra ----------
+  const listaCompraEl = document.getElementById('lista-compra-items');
+  const buscadorListaCompraEl = document.getElementById('buscador-lista-compra');
+  const paginacionListaCompraEl = document.getElementById('paginacion-lista-compra');
+  const selectProductoAñadir = document.getElementById('select-producto-añadir');
+  const buscadorProductoAñadirEl = document.getElementById('buscador-producto-añadir');
+  const inputCantidadAñadir = document.getElementById('input-cantidad-añadir');
+  const btnAñadirALista = document.getElementById('btn-añadir-a-lista');
+
+  let listaCompraActual = [];
+  const estadoPaginaListaCompra = { pagina: 1 };
+
+  buscadorListaCompraEl.addEventListener('input', () => { estadoPaginaListaCompra.pagina = 1; renderizarListaCompraFiltrada(); });
+
+  async function cargarListaCompra(hogarId) {
+    const { data, error } = await cliente
+      .from('lista_compra')
+      .select('id, cantidad, productos(id, nombre, unidad)')
+      .eq('hogar_id', hogarId)
+      .eq('estado', 'pendiente')
+      .order('creado_en');
+
+    if (error) {
+      listaCompraEl.innerHTML = `<li class="vacio">Error cargando la lista: ${error.message}</li>`;
+      console.error(error);
+      return;
+    }
+
+    listaCompraActual = data || [];
+    renderizarListaCompraFiltrada();
+  }
+
+  // Filtra por nombre de producto sobre los datos ya cargados (sin volver a consultar Supabase) y pagina el resultado.
+  function renderizarListaCompraFiltrada() {
+    const texto = buscadorListaCompraEl.value.trim().toLowerCase();
+    const itemsAMostrar = texto
+      ? listaCompraActual.filter(item => item.productos.nombre.toLowerCase().includes(texto))
+      : listaCompraActual;
+
+    if (listaCompraActual.length === 0) {
+      listaCompraEl.innerHTML = `<li class="vacio">La lista de la compra está vacía.</li>`;
+      paginacionListaCompraEl.innerHTML = '';
+      return;
+    }
+
+    if (itemsAMostrar.length === 0) {
+      listaCompraEl.innerHTML = `<li class="vacio">Ningún elemento de la lista coincide con la búsqueda.</li>`;
+      paginacionListaCompraEl.innerHTML = '';
+      return;
+    }
+
+    const itemsDeEstaPagina = recortarPagina(itemsAMostrar, estadoPaginaListaCompra);
+
+    listaCompraEl.innerHTML = '';
+    itemsDeEstaPagina.forEach(item => renderizarItemLista(item));
+
+    renderizarPaginacion(paginacionListaCompraEl, itemsAMostrar.length, estadoPaginaListaCompra.pagina, (nuevaPagina) => {
+      estadoPaginaListaCompra.pagina = nuevaPagina;
+      renderizarListaCompraFiltrada();
+    });
+  }
+
+  function renderizarItemLista(item) {
+    const li = document.createElement('li');
+    li.className = 'lista-compra-item';
+    li.innerHTML = `
+      <div class="lista-compra-info">
+        <span class="lista-compra-nombre">${item.productos.nombre}</span>
+        <span class="lista-compra-cantidad">Sugerido: ${item.cantidad} ${item.productos.unidad}</span>
+      </div>
+      <div class="botones-lista-compra">
+        <button class="btn-comprado">Comprado</button>
+        <button class="btn-quitar-lista" title="Quitar de la lista, sin marcarlo como comprado">✕</button>
+      </div>
+    `;
+
+    li.querySelector('.btn-comprado').addEventListener('click', () => marcarComprado(item, li));
+    li.querySelector('.btn-quitar-lista').addEventListener('click', () => quitarDeLista(item, li));
+    listaCompraEl.appendChild(li);
+  }
+
+  // Saca el item de la caché local y vuelve a pintar respetando el filtro activo,
+  // en vez de solo borrar el <li> — así el mensaje de "vacío" es siempre correcto.
+  function quitarItemDeCacheYRepintar(itemId) {
+    listaCompraActual = listaCompraActual.filter(i => i.id !== itemId);
+    renderizarListaCompraFiltrada();
+  }
+
+  async function quitarDeLista(item, liEl) {
+    if (!confirm(`¿Quitar "${item.productos.nombre}" de la lista de la compra? No se marcará como comprado.`)) return;
+
+    const { error } = await cliente.from('lista_compra').delete().eq('id', item.id);
+    if (error) { alert('Error al quitar de la lista: ' + error.message); return; }
+
+    quitarItemDeCacheYRepintar(item.id);
+  }
+
+  async function marcarComprado(item, liEl) {
+    const respuesta = window.prompt(
+      `¿Cuánto compraste de "${item.productos.nombre}"? (sugerido: ${item.cantidad})`,
+      item.cantidad
+    );
+
+    if (respuesta === null) return; // canceló
+
+    const cantidadComprada = parseFloat(respuesta);
+
+    if (isNaN(cantidadComprada) || cantidadComprada <= 0) {
+      // Se deja como "no comprado" — según lo acordado, el producto se queda en la lista (sigue en estado 'pendiente')
+      alert('No se registró compra. El producto sigue en la lista.');
+      return;
+    }
+
+    // Una sola llamada atómica: suma inventario + registra historial + marca la lista como comprada
+    const { error } = await cliente.rpc('confirmar_compra', {
+      p_hogar_id: hogarActual,
+      p_producto_id: item.productos.id,
+      p_cantidad: cantidadComprada,
+      p_lista_compra_id: item.id
+    });
+
+    if (error) { alert('Error al registrar la compra: ' + error.message); return; }
+
+    quitarItemDeCacheYRepintar(item.id);
+  }
+
+  // ---------- historial de compras (solo lectura) ----------
+  const linkVerHistorial = document.getElementById('link-ver-historial');
+  const seccionHistorial = document.getElementById('seccion-historial');
+  const listaHistorialEl = document.getElementById('lista-historial');
+  const paginacionHistorialEl = document.getElementById('paginacion-historial');
+
+  let historialActual = [];
+  const estadoPaginaHistorial = { pagina: 1 };
+
+  linkVerHistorial.addEventListener('click', () => {
+    const seVaAAbrir = seccionHistorial.classList.contains('oculto');
+    if (seVaAAbrir) {
+      seccionHistorial.classList.remove('oculto');
+      linkVerHistorial.textContent = 'Ocultar historial de compras';
+      estadoPaginaHistorial.pagina = 1;
+      cargarHistorialCompras();
+    } else {
+      seccionHistorial.classList.add('oculto');
+      linkVerHistorial.textContent = 'Ver historial de compras';
+    }
+  });
+
+  async function cargarHistorialCompras() {
+    listaHistorialEl.innerHTML = `<li class="cargando-lista">Cargando historial…</li>`;
+    paginacionHistorialEl.innerHTML = '';
+
+    const { data, error } = await cliente.rpc('obtener_historial_compras', { p_hogar_id: hogarActual });
+
+    if (error) {
+      listaHistorialEl.innerHTML = `<li class="vacio">Error cargando el historial: ${error.message}</li>`;
+      console.error(error);
+      return;
+    }
+
+    historialActual = data || [];
+    renderizarHistorialPaginado();
+  }
+
+  function renderizarHistorialPaginado() {
+    if (historialActual.length === 0) {
+      listaHistorialEl.innerHTML = `<li class="vacio">Todavía no hay compras registradas.</li>`;
+      paginacionHistorialEl.innerHTML = '';
+      return;
+    }
+
+    const filasDeEstaPagina = recortarPagina(historialActual, estadoPaginaHistorial);
+
+    listaHistorialEl.innerHTML = filasDeEstaPagina.map(fila => `
+      <li class="fila-historial">
+        <div class="historial-info">
+          <span class="historial-producto">${fila.producto_nombre}</span>
+          <span class="historial-detalle">${fila.cantidad_comprada} · ${fila.comprador_email || 'Comprador desconocido'}</span>
+        </div>
+        <span class="historial-fecha">${formatearFechaHistorial(fila.comprado_en)}</span>
+      </li>
+    `).join('');
+
+    renderizarPaginacion(paginacionHistorialEl, historialActual.length, estadoPaginaHistorial.pagina, (nuevaPagina) => {
+      estadoPaginaHistorial.pagina = nuevaPagina;
+      renderizarHistorialPaginado();
+    });
+  }
+
+  function formatearFechaHistorial(fechaIso) {
+    return new Date(fechaIso).toLocaleString('es-ES', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+
+
+  let productosParaAñadir = [];
+
+  async function cargarSelectorProductos(hogarId) {
+    const { data, error } = await cliente
+      .from('productos')
+      .select('id, nombre')
+      .eq('hogar_id', hogarId)
+      .eq('activo', true)
+      .order('nombre');
+
+    if (error) { console.error(error); return; }
+
+    productosParaAñadir = data || [];
+    buscadorProductoAñadirEl.value = '';
+    renderizarSelectorProductosFiltrado();
+  }
+
+  // Redibuja las opciones del <select> según lo que se haya escrito en el buscador.
+  // Conserva la selección actual si el producto elegido sigue entre los resultados.
+  function renderizarSelectorProductosFiltrado() {
+    const texto = buscadorProductoAñadirEl.value.trim().toLowerCase();
+    const seleccionActual = selectProductoAñadir.value;
+
+    const coincidencias = texto
+      ? productosParaAñadir.filter(p => p.nombre.toLowerCase().includes(texto))
+      : productosParaAñadir;
+
+    if (coincidencias.length === 0) {
+      selectProductoAñadir.innerHTML = '<option value="">Sin resultados</option>';
+      return;
+    }
+
+    selectProductoAñadir.innerHTML = coincidencias.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+
+    if (coincidencias.some(p => p.id === seleccionActual)) {
+      selectProductoAñadir.value = seleccionActual;
+    }
+  }
+
+  buscadorProductoAñadirEl.addEventListener('input', () => renderizarSelectorProductosFiltrado());
+
+  btnAñadirALista.addEventListener('click', async () => {
+    const productoId = selectProductoAñadir.value;
+    const cantidad = parseFloat(inputCantidadAñadir.value) || 1;
+
+    if (!productoId) return;
+
+    // Evitar duplicados: si ya existe una fila pendiente para este producto, actualizamos su cantidad
+    const { data: existente, error: errorLectura } = await cliente
+      .from('lista_compra')
+      .select('id')
+      .eq('producto_id', productoId)
+      .eq('estado', 'pendiente')
+      .maybeSingle();
+
+    if (errorLectura) { alert('Error: ' + errorLectura.message); return; }
+
+    if (existente) {
+      const { error } = await cliente
+        .from('lista_compra')
+        .update({ cantidad, actualizado_en: new Date().toISOString() })
+        .eq('id', existente.id);
+      if (error) { alert('Error al actualizar: ' + error.message); return; }
+    } else {
+      const { error } = await cliente
+        .from('lista_compra')
+        .insert({ hogar_id: hogarActual, producto_id: productoId, cantidad });
+      if (error) { alert('Error al añadir: ' + error.message); return; }
+    }
+
+    cargarListaCompra(hogarActual);
+  });
+
+  // ---------- formulario "Nuevo producto" ----------
+  const btnMostrarFormProducto = document.getElementById('btn-mostrar-form-producto');
+  const formNuevoProducto = document.getElementById('form-nuevo-producto');
+  const selectCategoria = document.getElementById('np-categoria');
+  const inputCategoriaNueva = document.getElementById('np-categoria-nueva');
+  const selectUnidad = document.getElementById('np-unidad');
+  const inputUnidadNueva = document.getElementById('np-unidad-nueva');
+  const mensajeNuevoProducto = document.getElementById('mensaje-nuevo-producto');
+
+  btnMostrarFormProducto.addEventListener('click', () => {
+    const seVaAAbrir = formNuevoProducto.classList.contains('oculto');
+    cerrarPanelesGestionInventario(); // cierra cualquier panel abierto (incluido este) antes de decidir
+    if (seVaAAbrir) {
+      formNuevoProducto.classList.remove('oculto');
+      btnMostrarFormProducto.textContent = 'Cancelar';
+      cargarOpcionesDesplegable('categorias', selectCategoria);
+      cargarOpcionesDesplegable('unidades', selectUnidad);
+    }
+  });
+
+  // ---------- sección de archivados ----------
+  const btnMostrarArchivados = document.getElementById('btn-mostrar-archivados');
+  const seccionArchivados = document.getElementById('seccion-archivados');
+  const listaArchivadosEl = document.getElementById('lista-archivados');
+
+  btnMostrarArchivados.addEventListener('click', () => {
+    const seVaAAbrir = seccionArchivados.classList.contains('oculto');
+    cerrarPanelesGestionInventario();
+    if (seVaAAbrir) {
+      seccionArchivados.classList.remove('oculto');
+      btnMostrarArchivados.textContent = 'Ocultar archivados';
+      cargarArchivados();
+    }
+  });
+
+  // ---------- sección de gestión de categorías (estilo etiquetas de Gmail) ----------
+  const btnMostrarCategorias = document.getElementById('btn-mostrar-categorias');
+  const seccionCategorias = document.getElementById('seccion-categorias');
+  const listaCategoriasEl = document.getElementById('lista-categorias-gestion');
+  let categoriasGestionActuales = [];
+
+  btnMostrarCategorias.addEventListener('click', () => {
+    const seVaAAbrir = seccionCategorias.classList.contains('oculto');
+    cerrarPanelesGestionInventario();
+    if (seVaAAbrir) {
+      seccionCategorias.classList.remove('oculto');
+      btnMostrarCategorias.textContent = 'Ocultar categorías';
+      cargarCategoriasGestion();
+    }
+  });
+
+  async function cargarCategoriasGestion() {
+    const { data: categorias, error: errorCategorias } = await cliente
+      .from('categorias')
+      .select('id, nombre')
+      .eq('hogar_id', hogarActual)
+      .order('nombre');
+
+    if (errorCategorias) {
+      listaCategoriasEl.innerHTML = `<li class="vacio">Error: ${errorCategorias.message}</li>`;
+      return;
+    }
+
+    // Contamos los productos de cada categoría en el propio cliente: son pocos datos
+    // y así nos ahorramos una consulta agrupada por cada categoría.
+    const { data: productos, error: errorProductos } = await cliente
+      .from('productos')
+      .select('categoria')
+      .eq('hogar_id', hogarActual);
+
+    if (errorProductos) console.error(errorProductos);
+
+    const conteos = {};
+    (productos || []).forEach(p => {
+      if (p.categoria) conteos[p.categoria] = (conteos[p.categoria] || 0) + 1;
+    });
+
+    categoriasGestionActuales = categorias || [];
+
+    if (categoriasGestionActuales.length === 0) {
+      listaCategoriasEl.innerHTML = `<li class="vacio">Todavía no hay categorías creadas.</li>`;
+      return;
+    }
+
+    listaCategoriasEl.innerHTML = '';
+    categoriasGestionActuales.forEach(cat => renderizarFilaCategoria(cat, conteos[cat.nombre] || 0));
+  }
+
+  function renderizarFilaCategoria(categoria, numProductos) {
+    const li = document.createElement('li');
+    li.className = 'fila-categoria';
+    li.innerHTML = `
+      <div class="categoria-info">
+        <span class="categoria-nombre">${categoria.nombre}</span>
+        <span class="categoria-conteo">${numProductos} producto${numProductos === 1 ? '' : 's'}</span>
+      </div>
+      <div class="acciones-categoria">
+        <button class="btn-editar-producto btn-renombrar-categoria" title="Renombrar">✎</button>
+        <button class="btn-editar-producto btn-fusionar-categoria" title="Fusionar con otra">⇄</button>
+        <button class="btn-eliminar-producto btn-borrar-categoria" title="Borrar">🗑</button>
+      </div>
+      <div class="panel-edicion-producto oculto panel-renombrar-categoria">
+        <div class="campo">
+          <label>Nuevo nombre</label>
+          <input type="text" class="input-nuevo-nombre-categoria" value="${categoria.nombre}">
+        </div>
+        <div class="botones-panel-edicion">
+          <button class="btn-guardar-edicion btn-guardar-renombrar">Guardar</button>
+          <button class="btn-cancelar-edicion">Cancelar</button>
+        </div>
+        <div class="mensaje-categoria"></div>
+      </div>
+      <div class="panel-edicion-producto oculto panel-fusionar-categoria">
+        <div class="campo">
+          <label>Fusionar con</label>
+          <select class="select-fusion-destino"></select>
+        </div>
+        <p class="subtitulo" style="margin-bottom:0.5rem;">Todos los productos de "${categoria.nombre}" pasarán a la categoría elegida, y "${categoria.nombre}" se borrará.</p>
+        <div class="botones-panel-edicion">
+          <button class="btn-guardar-edicion btn-confirmar-fusion">Fusionar</button>
+          <button class="btn-cancelar-edicion">Cancelar</button>
+        </div>
+        <div class="mensaje-categoria"></div>
+      </div>
+    `;
+
+    const panelRenombrar = li.querySelector('.panel-renombrar-categoria');
+    const panelFusionar = li.querySelector('.panel-fusionar-categoria');
+
+    li.querySelector('.btn-renombrar-categoria').addEventListener('click', () => {
+      const seVaAAbrir = panelRenombrar.classList.contains('oculto');
+      panelRenombrar.classList.add('oculto');
+      panelFusionar.classList.add('oculto');
+      if (seVaAAbrir) panelRenombrar.classList.remove('oculto');
+    });
+
+    li.querySelector('.btn-fusionar-categoria').addEventListener('click', () => {
+      const seVaAAbrir = panelFusionar.classList.contains('oculto');
+      panelRenombrar.classList.add('oculto');
+      panelFusionar.classList.add('oculto');
+      if (seVaAAbrir) {
+        panelFusionar.classList.remove('oculto');
+        const selectDestino = panelFusionar.querySelector('.select-fusion-destino');
+        selectDestino.innerHTML = categoriasGestionActuales
+          .filter(c => c.id !== categoria.id)
+          .map(c => `<option value="${c.nombre}">${c.nombre}</option>`)
+          .join('');
+      }
+    });
+
+    panelRenombrar.querySelector('.btn-cancelar-edicion').addEventListener('click', () => panelRenombrar.classList.add('oculto'));
+    panelFusionar.querySelector('.btn-cancelar-edicion').addEventListener('click', () => panelFusionar.classList.add('oculto'));
+
+    li.querySelector('.btn-guardar-renombrar').addEventListener('click', async () => {
+      const nuevoNombre = li.querySelector('.input-nuevo-nombre-categoria').value.trim();
+      const mensajeEl = panelRenombrar.querySelector('.mensaje-categoria');
+
+      if (!nuevoNombre) { mensajeEl.innerHTML = `<div class="mensaje error">El nombre no puede estar vacío.</div>`; return; }
+      if (nuevoNombre === categoria.nombre) { panelRenombrar.classList.add('oculto'); return; }
+
+      const { error } = await cliente.rpc('renombrar_categoria', {
+        p_hogar_id: hogarActual,
+        p_categoria_actual: categoria.nombre,
+        p_categoria_nueva: nuevoNombre
+      });
+
+      if (error) { mensajeEl.innerHTML = `<div class="mensaje error">${error.message}</div>`; return; }
+
+      cargarCategoriasGestion();
+      cargarInventario(hogarActual);
+    });
+
+    li.querySelector('.btn-confirmar-fusion').addEventListener('click', async () => {
+      const destino = panelFusionar.querySelector('.select-fusion-destino').value;
+      const mensajeEl = panelFusionar.querySelector('.mensaje-categoria');
+
+      if (!destino) { mensajeEl.innerHTML = `<div class="mensaje error">Elige una categoría destino.</div>`; return; }
+      if (!confirm(`¿Fusionar "${categoria.nombre}" con "${destino}"? Esta acción no se puede deshacer.`)) return;
+
+      const { error } = await cliente.rpc('fusionar_categorias', {
+        p_hogar_id: hogarActual,
+        p_categoria_origen: categoria.nombre,
+        p_categoria_destino: destino
+      });
+
+      if (error) { mensajeEl.innerHTML = `<div class="mensaje error">${error.message}</div>`; return; }
+
+      cargarCategoriasGestion();
+      cargarInventario(hogarActual);
+    });
+
+    li.querySelector('.btn-borrar-categoria').addEventListener('click', async () => {
+      // Primer intento sin mover productos, solo para saber si hace falta preguntar algo
+      const { data: numAfectados, error } = await cliente.rpc('borrar_categoria', {
+        p_hogar_id: hogarActual,
+        p_categoria: categoria.nombre,
+        p_mover_a_sin_categoria: false
+      });
+
+      if (error) { alert('Error al borrar la categoría: ' + error.message); return; }
+
+      if (numAfectados > 0) {
+        const mover = confirm(`"${categoria.nombre}" tiene ${numAfectados} producto(s) asignados. Pulsa Aceptar para moverlos a "Sin categoría" y borrar la categoría, o Cancelar para no hacer nada.`);
+        if (!mover) return;
+
+        const { error: errorSegundo } = await cliente.rpc('borrar_categoria', {
+          p_hogar_id: hogarActual,
+          p_categoria: categoria.nombre,
+          p_mover_a_sin_categoria: true
+        });
+
+        if (errorSegundo) { alert('Error al borrar la categoría: ' + errorSegundo.message); return; }
+      }
+
+      cargarCategoriasGestion();
+      cargarInventario(hogarActual);
+    });
+
+    listaCategoriasEl.appendChild(li);
+  }
+
+  // ---------- modo edición global ----------
+  const btnModoEdicion = document.getElementById('btn-modo-edicion');
+
+  btnModoEdicion.addEventListener('click', () => {
+    const seVaAActivar = !vistaInventario.classList.contains('modo-edicion');
+    cerrarPanelesGestionInventario(); // cierra todo (incluido el propio modo edición) antes de decidir
+    if (seVaAActivar) {
+      vistaInventario.classList.add('modo-edicion');
+      btnModoEdicion.textContent = 'Listo';
+    }
+  });
+
+  let archivadosActuales = [];
+  const estadoPaginaArchivados = { pagina: 1 };
+  const paginacionArchivadosEl = document.getElementById('paginacion-archivados');
+
+  async function cargarArchivados() {
+    const { data, error } = await cliente
+      .from('productos')
+      .select('id, nombre')
+      .eq('hogar_id', hogarActual)
+      .eq('activo', false)
+      .order('nombre');
+
+    if (error) {
+      listaArchivadosEl.innerHTML = `<li class="vacio">Error: ${error.message}</li>`;
+      paginacionArchivadosEl.innerHTML = '';
+      return;
+    }
+
+    archivadosActuales = data || [];
+    estadoPaginaArchivados.pagina = 1;
+    renderizarArchivadosPaginado();
+  }
+
+  function renderizarArchivadosPaginado() {
+    if (archivadosActuales.length === 0) {
+      listaArchivadosEl.innerHTML = `<li class="vacio">No hay productos archivados.</li>`;
+      paginacionArchivadosEl.innerHTML = '';
+      return;
+    }
+
+    const productosDeEstaPagina = recortarPagina(archivadosActuales, estadoPaginaArchivados);
+
+    listaArchivadosEl.innerHTML = productosDeEstaPagina.map(p => `
+      <li class="fila-archivado" data-id="${p.id}">
+        <span>${p.nombre}</span>
+        <button class="btn-reactivar">Reactivar</button>
+      </li>
+    `).join('');
+
+    listaArchivadosEl.querySelectorAll('.fila-archivado').forEach(fila => {
+      fila.querySelector('.btn-reactivar').addEventListener('click', async () => {
+        const { error } = await cliente.from('productos').update({ activo: true }).eq('id', fila.dataset.id);
+        if (error) { alert('Error al reactivar: ' + error.message); return; }
+        archivadosActuales = archivadosActuales.filter(p => p.id !== fila.dataset.id);
+        renderizarArchivadosPaginado();
+        cargarInventario(hogarActual);
+      });
+    });
+
+    renderizarPaginacion(paginacionArchivadosEl, archivadosActuales.length, estadoPaginaArchivados.pagina, (nuevaPagina) => {
+      estadoPaginaArchivados.pagina = nuevaPagina;
+      renderizarArchivadosPaginado();
+    });
+  }
+
+  // Carga un desplegable (categorías o unidades) con sus valores + una opción "+ Nueva..."
+  async function cargarOpcionesDesplegable(tabla, selectEl) {
+    const { data, error } = await cliente
+      .from(tabla)
+      .select('nombre')
+      .eq('hogar_id', hogarActual)
+      .order('nombre');
+
+    if (error) { console.error(error); return; }
+
+    const opciones = (data || []).map(fila => `<option value="${fila.nombre}">${fila.nombre}</option>`).join('');
+    selectEl.innerHTML = opciones + `<option value="__nueva__">+ Añadir nueva…</option>`;
+  }
+
+  // Cuando eligen "+ Añadir nueva…", muestra el campo de texto correspondiente
+  selectCategoria.addEventListener('change', () => {
+    inputCategoriaNueva.classList.toggle('oculto', selectCategoria.value !== '__nueva__');
+  });
+  selectUnidad.addEventListener('change', () => {
+    inputUnidadNueva.classList.toggle('oculto', selectUnidad.value !== '__nueva__');
+  });
+
+  document.getElementById('btn-crear-producto').addEventListener('click', async () => {
+    const nombre = document.getElementById('np-nombre').value.trim();
+    const stockMinimo = parseFloat(document.getElementById('np-stock-minimo').value) || 0;
+    const cantidadInicial = parseFloat(document.getElementById('np-cantidad-inicial').value) || 0;
+    const pasoCantidad = parseFloat(document.getElementById('np-paso-cantidad').value) || 1;
+
+    let categoria = selectCategoria.value;
+    let unidad = selectUnidad.value;
+
+    if (!nombre) {
+      mensajeNuevoProducto.innerHTML = `<div class="mensaje error">Ponle un nombre al producto.</div>`;
+      return;
+    }
+
+    // Si eligieron "+ Añadir nueva…", primero creamos la categoría/unidad en su tabla
+    if (categoria === '__nueva__') {
+      categoria = inputCategoriaNueva.value.trim();
+      if (!categoria) { mensajeNuevoProducto.innerHTML = `<div class="mensaje error">Escribe el nombre de la categoría nueva.</div>`; return; }
+      const { error } = await cliente.from('categorias').insert({ hogar_id: hogarActual, nombre: categoria });
+      if (error && !error.message.includes('duplicate')) { mensajeNuevoProducto.innerHTML = `<div class="mensaje error">${error.message}</div>`; return; }
+    }
+
+    if (unidad === '__nueva__') {
+      unidad = inputUnidadNueva.value.trim();
+      if (!unidad) { mensajeNuevoProducto.innerHTML = `<div class="mensaje error">Escribe el nombre de la unidad nueva.</div>`; return; }
+      const { error } = await cliente.from('unidades').insert({ hogar_id: hogarActual, nombre: unidad });
+      if (error && !error.message.includes('duplicate')) { mensajeNuevoProducto.innerHTML = `<div class="mensaje error">${error.message}</div>`; return; }
+    }
+
+    const { data: productoCreado, error: errorProducto } = await cliente
+      .from('productos')
+      .insert({
+        hogar_id: hogarActual,
+        nombre,
+        categoria: categoria || null,
+        unidad: unidad || 'unidades',
+        stock_minimo: stockMinimo,
+        paso_cantidad: pasoCantidad
+      })
+      .select('id')
+      .single();
+
+    if (errorProducto) {
+      mensajeNuevoProducto.innerHTML = `<div class="mensaje error">${errorProducto.message}</div>`;
+      return;
+    }
+
+    // Si ya tenías unidades de este producto, se lo dejamos guardado desde ya en el inventario
+    if (cantidadInicial > 0) {
+      const { error: errorInventario } = await cliente
+        .from('inventario')
+        .insert({ producto_id: productoCreado.id, cantidad: cantidadInicial });
+      if (errorInventario) {
+        mensajeNuevoProducto.innerHTML = `<div class="mensaje error">Producto creado, pero falló guardar la cantidad inicial: ${errorInventario.message}</div>`;
+        cargarInventario(hogarActual);
+        return;
+      }
+    }
+
+    document.getElementById('np-nombre').value = '';
+    document.getElementById('np-cantidad-inicial').value = '0';
+    document.getElementById('np-stock-minimo').value = '1';
+    document.getElementById('np-paso-cantidad').value = '1';
+    inputCategoriaNueva.value = '';
+    inputUnidadNueva.value = '';
+    inputCategoriaNueva.classList.add('oculto');
+    inputUnidadNueva.classList.add('oculto');
+    mensajeNuevoProducto.innerHTML = '';
+    cerrarPanelesGestionInventario(); // ya terminó la acción, se cierra el formulario solo
+    cargarInventario(hogarActual);
+  });
+
+  // ---------- Realtime: refresca automáticamente cuando cambia algo en otro dispositivo ----------
+  let canalRealtime = null;
+
+  function suscribirseARealtime(hogarId, rol) {
+    if (canalRealtime) {
+      cliente.removeChannel(canalRealtime);
+    }
+
+    canalRealtime = cliente
+      .channel('cambios-hogar-' + hogarId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, () => {
+        // inventario no tiene hogar_id propio; RLS ya filtra qué cambios nos llegan
+        if (!listaEl.classList.contains('oculto')) cargarInventario(hogarActual);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lista_compra', filter: `hogar_id=eq.${hogarId}` }, () => {
+        if (!vistaListaCompra.classList.contains('oculto')) cargarListaCompra(hogarActual);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'miembros_hogar', filter: `hogar_id=eq.${hogarId}` }, () => {
+        if (rol === 'propietario') cargarSolicitudesPendientes(hogarActual);
+      })
+      .subscribe();
+  }
+
+  // ---------- arranque ----------
+  comprobarEstadoUsuario();
+
+  // ---------- registro del service worker (PWA) ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('Error registrando service worker:', err));
+    });
+  }
+</script>
+
+</body>
+</html>
