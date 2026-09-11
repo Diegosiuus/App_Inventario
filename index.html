@@ -578,6 +578,24 @@
     font-family: system-ui, sans-serif;
   }
 
+  .filtro-necesita-comprar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: var(--gris-texto);
+    cursor: pointer;
+  }
+
+  .filtro-necesita-comprar input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--naranja-tostado);
+    cursor: pointer;
+  }
+
   /* El buscador de "añadir a la lista" pertenece visualmente al bloque de abajo (desplegable +
      cantidad + botón), así que se separa de la lista de arriba y se pega a ese bloque. */
   #buscador-producto-añadir {
@@ -829,6 +847,10 @@
 
     <input type="text" id="buscador-inventario" class="buscador-inventario" placeholder="Buscar producto…">
 
+    <label class="filtro-necesita-comprar">
+      <input type="checkbox" id="filtro-necesita-comprar">
+      Solo lo que necesito comprar
+    </label>
 
     <div id="form-nuevo-producto" class="form-nuevo-producto oculto">
       <div class="campo">
@@ -937,7 +959,7 @@
   }
 
   // ---------- helper genérico de paginación (usado en inventario, lista de la compra, historial y archivados) ----------
-  const ITEMS_POR_PAGINA = 10;
+  const ITEMS_POR_PAGINA = 15;
 
   // Recorta el array de items a la página indicada en "estado.pagina", corrigiendo
   // el número de página si se ha quedado fuera de rango (p.ej. al filtrar o al borrar el último item de una página).
@@ -1257,11 +1279,13 @@
   const listaEl = document.getElementById('lista-productos');
   const filtroCategoriaEl = document.getElementById('filtro-categoria');
   const buscadorInventarioEl = document.getElementById('buscador-inventario');
+  const filtroNecesitaComprarEl = document.getElementById('filtro-necesita-comprar');
   const paginacionProductosEl = document.getElementById('paginacion-productos');
   const estadoPaginaInventario = { pagina: 1 };
 
   filtroCategoriaEl.addEventListener('change', () => { estadoPaginaInventario.pagina = 1; renderizarListaFiltrada(); });
   buscadorInventarioEl.addEventListener('input', () => { estadoPaginaInventario.pagina = 1; renderizarListaFiltrada(); });
+  filtroNecesitaComprarEl.addEventListener('change', () => { estadoPaginaInventario.pagina = 1; renderizarListaFiltrada(); });
 
   async function cargarInventario(hogarId) {
     const { data, error } = await cliente
@@ -1296,12 +1320,13 @@
     }
   }
 
-  // Combina el filtro de categoría (desplegable) con el buscador de texto (nombre del producto),
-  // y pagina el resultado. Si "Todas las categorías" está seleccionado, cada resultado ya muestra
-  // su categoría como etiqueta debajo del nombre (ver renderizarProducto), así que no hace falta nada extra aquí.
+  // Combina el filtro de categoría, el buscador de texto y el checkbox de "necesito comprar"
+  // (cantidad actual <= umbral de aviso), y pagina el resultado. Si "Todas las categorías" está
+  // seleccionado, cada resultado ya muestra su categoría como etiqueta (ver renderizarProducto).
   function renderizarListaFiltrada() {
     const categoriaElegida = filtroCategoriaEl.value;
     const textoBusqueda = buscadorInventarioEl.value.trim().toLowerCase();
+    const soloNecesitaComprar = filtroNecesitaComprarEl.checked;
 
     let productosAMostrar = categoriaElegida
       ? productosActuales.filter(p => p.categoria === categoriaElegida)
@@ -1311,10 +1336,16 @@
       productosAMostrar = productosAMostrar.filter(p => p.nombre.toLowerCase().includes(textoBusqueda));
     }
 
+    if (soloNecesitaComprar) {
+      productosAMostrar = productosAMostrar.filter(p => obtenerCantidadProducto(p).cantidad <= p.stock_minimo);
+    }
+
     if (productosAMostrar.length === 0) {
-      const mensaje = textoBusqueda
-        ? 'Ningún producto coincide con la búsqueda.'
-        : (categoriaElegida ? 'No hay productos en esta categoría.' : 'Todavía no hay productos en este hogar.');
+      const mensaje = soloNecesitaComprar
+        ? 'No necesitas comprar nada ahora mismo 🎉'
+        : (textoBusqueda
+          ? 'Ningún producto coincide con la búsqueda.'
+          : (categoriaElegida ? 'No hay productos en esta categoría.' : 'Todavía no hay productos en este hogar.'));
       listaEl.innerHTML = `<li class="vacio">${mensaje}</li>`;
       paginacionProductosEl.innerHTML = '';
       return;
@@ -1332,18 +1363,22 @@
   }
 
 
-  function renderizarProducto(producto) {
-    // Como inventario.producto_id es único, Supabase devuelve la relación como un
-    // objeto suelto (no como array) — hay que soportar ambos casos.
+  // Como inventario.producto_id es único, Supabase devuelve la relación como un
+  // objeto suelto (no como array) — hay que soportar ambos casos. Se usa tanto al
+  // pintar cada producto como al filtrar por "necesito comprar".
+  function obtenerCantidadProducto(producto) {
     const filaInventario = Array.isArray(producto.inventario)
       ? producto.inventario[0]
       : producto.inventario || null;
 
-    const estado = {
+    return {
       cantidad: filaInventario ? filaInventario.cantidad : 0,
       filaId: filaInventario ? filaInventario.id : null
     };
+  }
 
+  function renderizarProducto(producto) {
+    const estado = obtenerCantidadProducto(producto);
     const bajoStock = estado.cantidad <= producto.stock_minimo;
 
     const li = document.createElement('li');
