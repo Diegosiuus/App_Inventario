@@ -824,6 +824,7 @@
     <h1 id="titulo-vista">Inventario</h1>
     <span>
       <button class="btn-cambiar-hogar oculto" id="btn-cambiar-hogar">Cambiar de hogar</button>
+      <button class="btn-cambiar-hogar" id="btn-notificaciones">🔔 Notificaciones</button>
       <button class="btn-salir" id="btn-salir-app">Cerrar sesión</button>
     </span>
   </div>
@@ -1148,6 +1149,86 @@
     });
   });
 
+  // ---------- notificaciones push ----------
+  // Clave pública VAPID: identifica esta app ante los navegadores. No es secreta,
+  // puede estar aquí igual que la publishable key de Supabase.
+  const VAPID_PUBLIC_KEY = 'BM8f9LO65sWkZsT9FEyGU-k5Oz7bQr4F_aFbfYdXdYmiAAZjJVhWVY1QbOpMZRUNor6aZh-WrMRuqEUCAU4FrgQ';
+  const btnNotificaciones = document.getElementById('btn-notificaciones');
+
+  // El navegador solo acepta la clave VAPID en formato binario (Uint8Array), no como
+  // texto — esta conversión es estándar y siempre igual para cualquier app con Web Push.
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map((caracter) => caracter.charCodeAt(0)));
+  }
+
+  async function actualizarBotonNotificaciones() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      btnNotificaciones.classList.add('oculto');
+      return;
+    }
+
+    const registro = await navigator.serviceWorker.ready;
+    const suscripcionActual = await registro.pushManager.getSubscription();
+    btnNotificaciones.textContent = suscripcionActual ? '🔔 Notificaciones activadas' : '🔔 Activar notificaciones';
+  }
+
+  btnNotificaciones.addEventListener('click', async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Este navegador no admite notificaciones push.');
+      return;
+    }
+
+    const registro = await navigator.serviceWorker.ready;
+    const suscripcionActual = await registro.pushManager.getSubscription();
+
+    // Si ya estaba activado, este toque sirve para desactivarlo en este dispositivo
+    if (suscripcionActual) {
+      if (!confirm('¿Desactivar las notificaciones en este dispositivo?')) return;
+
+      const { error } = await cliente.from('push_subscriptions').delete().eq('endpoint', suscripcionActual.endpoint);
+      if (error) { alert('Error al desactivar: ' + error.message); return; }
+
+      await suscripcionActual.unsubscribe();
+      actualizarBotonNotificaciones();
+      return;
+    }
+
+    const permiso = await Notification.requestPermission();
+    if (permiso !== 'granted') {
+      alert('No se concedió permiso para las notificaciones. Puedes activarlo más tarde desde los ajustes del navegador.');
+      return;
+    }
+
+    let nuevaSuscripcion;
+    try {
+      nuevaSuscripcion = await registro.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    } catch (err) {
+      alert('Error al activar las notificaciones: ' + err.message);
+      return;
+    }
+
+    const { data: { user } } = await cliente.auth.getUser();
+    const suscripcionJson = nuevaSuscripcion.toJSON();
+
+    const { error } = await cliente.from('push_subscriptions').upsert({
+      usuario_id: user.id,
+      hogar_id: hogarActual,
+      endpoint: suscripcionJson.endpoint,
+      p256dh: suscripcionJson.keys.p256dh,
+      clave_auth: suscripcionJson.keys.auth
+    }, { onConflict: 'endpoint' });
+
+    if (error) { alert('Error guardando la suscripción: ' + error.message); return; }
+
+    actualizarBotonNotificaciones();
+  });
+
   // ---------- comprobación de sesión y membresía ----------
   // ---------- multi-hogar: super admin y selector ----------
   let ultimosHogaresDisponibles = [];
@@ -1191,6 +1272,7 @@
     }
 
     suscribirseARealtime(hogar.id, hogar.rol);
+    actualizarBotonNotificaciones();
   }
 
   btnCambiarHogar.addEventListener('click', () => {
@@ -1610,30 +1692,21 @@
   }
 
   async function ajustarCantidad(producto, estado, delta, valorEl, liEl) {
-    // Redondeamos a 2 decimales para evitar errores típicos de coma flotante (0.1+0.2 ≠ 0.3 exacto)
-    const nuevaCantidad = Math.round(Math.max(0, estado.cantidad + delta) * 100) / 100;
+    // La suma se hace en la base de datos (ver ajustar_cantidad_inventario), no aquí,
+    // para que dos pulsaciones casi simultáneas desde dos móviles no se pisen entre sí.
+    const { data, error } = await cliente.rpc('ajustar_cantidad_inventario', {
+      p_producto_id: producto.id,
+      p_delta: delta
+    });
 
-    if (estado.filaId) {
-      const { error } = await cliente
-        .from('inventario')
-        .update({ cantidad: nuevaCantidad, actualizado_en: new Date().toISOString() })
-        .eq('id', estado.filaId);
+    if (error) { alert('Error al actualizar cantidad: ' + error.message); console.error(error); return; }
 
-      if (error) { alert('Error al actualizar cantidad: ' + error.message); console.error(error); return; }
-    } else {
-      const { data, error } = await cliente
-        .from('inventario')
-        .insert({ producto_id: producto.id, cantidad: nuevaCantidad })
-        .select('id')
-        .single();
+    const fila = Array.isArray(data) ? data[0] : data;
+    estado.cantidad = fila.cantidad_nueva;
+    estado.filaId = fila.fila_id;
 
-      if (error) { alert('Error al crear inventario: ' + error.message); console.error(error); return; }
-      estado.filaId = data.id;
-    }
-
-    estado.cantidad = nuevaCantidad;
-    valorEl.textContent = nuevaCantidad;
-    liEl.classList.toggle('bajo-stock', nuevaCantidad <= producto.stock_minimo);
+    valorEl.textContent = estado.cantidad;
+    liEl.classList.toggle('bajo-stock', estado.cantidad <= producto.stock_minimo);
   }
 
   // ---------- solicitudes pendientes (solo propietario) ----------

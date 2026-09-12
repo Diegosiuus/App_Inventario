@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventario-casa-v2';
+const CACHE_NAME = 'inventario-casa-v3';
 const ARCHIVOS_APP = [
   './index.html',
   './manifest.json',
@@ -57,6 +57,43 @@ self.addEventListener('fetch', (evento) => {
   evento.respondWith(
     caches.match(evento.request).then((respuestaCache) => {
       return respuestaCache || fetch(evento.request);
+    })
+  );
+});
+
+// ---------- notificaciones push ----------
+// Se dispara cuando la Edge Function de Supabase envía un aviso (alguien compró,
+// añadió algo a la lista, o modificó un producto). El móvil recibe esto aunque
+// la app esté cerrada, siempre que el navegador siga corriendo en segundo plano.
+self.addEventListener('push', (evento) => {
+  let datos = { title: 'Inventario de casa', body: 'Ha habido una actualización.' };
+
+  try {
+    datos = evento.data.json();
+  } catch (e) {
+    // Si el mensaje no viniera en JSON válido, nos quedamos con el texto por defecto de arriba
+  }
+
+  evento.waitUntil(
+    self.registration.showNotification(datos.title, {
+      body: datos.body,
+      icon: './icon-192.png',
+      badge: './icon-192.png'
+    })
+  );
+});
+
+// Al tocar la notificación: si ya hay una pestaña/ventana abierta de la app, la enfoca
+// en vez de abrir una nueva; si no, abre una nueva.
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+
+  evento.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
+      for (const clienteVentana of listaClientes) {
+        if ('focus' in clienteVentana) return clienteVentana.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('./index.html');
     })
   );
 });
