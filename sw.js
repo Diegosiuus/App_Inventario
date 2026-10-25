@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventario-casa-v3';
+const CACHE_NAME = 'inventario-casa-v4';
 const ARCHIVOS_APP = [
   './index.html',
   './manifest.json',
@@ -14,14 +14,13 @@ self.addEventListener('install', (evento) => {
   self.skipWaiting();
 });
 
-// Al activar, borra cachés antiguas de versiones anteriores (esto es lo que
-// limpia la copia vieja de index.html que quedó atascada)
+// Al activar, solo borra cachés antiguas de esta app en el origen compartido.
 self.addEventListener('activate', (evento) => {
   evento.waitUntil(
     caches.keys().then((nombres) =>
       Promise.all(
         nombres
-          .filter((nombre) => nombre !== CACHE_NAME)
+          .filter((nombre) => nombre.startsWith('inventario-casa-') && nombre !== CACHE_NAME)
           .map((nombre) => caches.delete(nombre))
       )
     )
